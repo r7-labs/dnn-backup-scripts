@@ -1,0 +1,59 @@
+#!/bin/sh
+
+# params
+TARGET=$1
+GET_BASEURL=$2
+BACKUP_DIR=$3
+MAX_BACKUPS=$4
+
+LIMIT_RATE=10m
+GET_CMD="curl --limit-rate $LIMIT_RATE"
+TODAY=$(date +%y%m%d)
+TARGET_FILE=$TARGET-$TODAY.7z
+NOTIFY_TIME=1200000 # in ms, 20 min
+
+notify-send -t $NOTIFY_TIME "Backup download started" "Target: $TARGET"
+
+ORIGINAL_DIR=$PWD
+cd $BACKUP_DIR
+
+$GET_CMD -o "$TARGET_FILE" "$GET_BASEURL/$TARGET_FILE"
+
+if [ $? -ne 0 ]; then
+	notify-send -u critical -t $NOTIFY_TIME "Backup download error" "Cannot download $TARGET backup file!"
+	exit 1
+fi
+
+$GET_CMD -o "$TARGET_FILE.md5" "$GET_BASEURL/$TARGET_FILE.md5"
+
+if [ $? -ne 0 ]; then
+	notify-send -u critical -t $NOTIFY_TIME "Backup download error" "Cannot download $TARGET backup file checksum!"
+	exit 1
+fi
+
+# check MD5
+dos2unix "$TARGET_FILE.md5"
+# grep removes fciv comments, sed add two spaces after hash
+CHECKSUM_RESULT=$(cat "$TARGET_FILE.md5" | grep -v // |  sed -e "s/ \+/  /g" | md5sum -c)
+
+if [ $? -ne 0 ]; then
+	notify-send -u critical -t $NOTIFY_TIME "Backup checksum error" "$CHECKSUM_RESULT"
+	rm -f "$TARGET_FILE"
+	rm -f "$TARGET_FILE.md5"
+	exit 1
+else
+	notify-send -t $NOTIFY_TIME "Backup checksum verified" "$CHECKSUM_RESULT"
+fi
+
+BACKUPS_COUNT=$(find . -type f -name "$TARGET-*.7z" -print | wc -l)
+while [ $BACKUPS_COUNT -gt $MAX_BACKUPS ]; do
+	OLDEST_BACKUP_FILE=$(find . -type f -name "$TARGET-*.7z" -print | sort | head -1)
+	rm -f "$OLDEST_BACKUP_FILE"
+	if [ -f "$OLDEST_BACKUP_FILE.md5" ]; then
+		rm -f "$OLDEST_BACKUP_FILE.md5"
+	fi
+	BACKUPS_COUNT=$(find . -name "$TARGET-*.7z" -print | wc -l)
+done
+
+cd $ORIGINAL_DIR
+
