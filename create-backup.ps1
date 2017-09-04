@@ -56,11 +56,6 @@ Copy-Item -Recurse -Force "W:\admin" (Join-Path $TargetConfigDirectory "admin")
 ## Backup target ACLs
 
 Get-ChildItem $TargetDirectory -Recurse | Get-Acl | Format-List | Out-File (Join-Path $TargetConfigDirectory -ChildPath "acl" | Join-Path -ChildPath "acl.txt")
-
-# Set "Hidden" attribute on target config dir
-# TODO: Remove target config dir after creating backup
-
-Get-ChildItem $TargetConfigDirectory -Recurse | foreach {$_.Attributes = 'Hidden'}
 	
 if ($Target -eq "dotnetnuke") {
  
@@ -97,6 +92,10 @@ if ( -not $? ) {
 		Write-Error "7-Zip exited with code $LastExitCode"
 	}
 }
+
+# Remove target config dir
+
+Remove-Item -Recurse -Force $TargetConfigDirectory
 
 # TODO: Support more than one backup  file per day
 # TODO: Use PowerShell script and SHA256?
