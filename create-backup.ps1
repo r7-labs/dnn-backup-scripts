@@ -5,6 +5,8 @@ Param (
 )
 
 $BackupDirectory = "B:\Backup"
+# TODO: Backup attachments outside target directory
+$ConfigDirectory = "_Backup_9SH26GA7"
 $DbDirectory = "W:\Database"
 $DbLogDirectory = "W:\Database"
 $DbServer = "(local)"
@@ -26,33 +28,44 @@ if (-not (Test-Path -Path $DbLogDirectory)) {
 	Write-Error "Database log directory '$DbLogDirectory' not exists"
 }
 
-if ($Target -eq "dotnetnuke") {
+# Create target config directory and subdirs
+
+$TargetConfigDirectory = Join-Path $TargetDirectory $ConfigDirectory
+New-Item -ItemType Directory -Force -Path $TargetConfigDirectory
+New-Item -ItemType Directory -Force -Path (Join-Path $TargetConfigDirectory "admin")
+New-Item -ItemType Directory -Force -Path (Join-Path $TargetConfigDirectory "iis")
+New-Item -ItemType Directory -Force -Path (Join-Path $TargetConfigDirectory "acl")
+
+## Backup IIS configuration
+
+$appCmd = Join-Path $Env:windir "\system32\inetsrv\appcmd.exe"
+$iisConfigDirectory = Join-Path $Env:windir "\system32\inetsrv\backup\iis_config"
+
+$deleteBackupArgs = 'delete', 'backup', '"iis_config"'
+$addBackupArgs = 'add', 'backup', '"iis_config"'
+
+& $appCmd $deleteBackupArgs
+& $appCmd $addBackupArgs
+
+Copy-Item -Recurse -Force $iisConfigDirectory (Join-Path $TargetConfigDirectory "iis")
+
+## Backup admin scripts
+
+Copy-Item -Recurse -Force "W:\admin" (Join-Path $TargetConfigDirectory "admin")
+
+## Backup target ACLs
+
+Get-ChildItem $TargetDirectory -Recurse | Get-Acl | Format-List | Out-File (Join-Path $TargetConfigDirectory -ChildPath "acl" | Join-Path -ChildPath "acl.txt")
+
+# Set "Hidden" attribute on target config dir
+# TODO: Remove target config dir after creating backup
+
+Get-ChildItem $TargetConfigDirectory -Recurse | foreach {$_.Attributes = 'Hidden'}
 	
-	## Backup IIS configuration
-
-	# create target config directory
-	$TargetConfigDirectory = Join-Path $TargetDirectory "_Backup_9SH26GA7"
-	New-Item -ItemType Directory -Force -Path $TargetConfigDirectory
-
-	$appCmd = Join-Path $Env:windir "\system32\inetsrv\appcmd.exe"
-	$configDirectory = Join-Path $Env:windir "\system32\inetsrv\backup\iis_config"
-
-	$deleteBackupArgs = 'delete', 'backup', '"iis_config"'
-	$addBackupArgs = 'add', 'backup', '"iis_config"'
-
-	& $appCmd $deleteBackupArgs
-	& $appCmd $addBackupArgs
-
-	Copy-Item -Recurse -Force $configDirectory $TargetConfigDirectory
-
-	## Backup admin scripts and settings
-
-	Copy-Item -Recurse -Force "C:\admin" $TargetConfigDirectory
-
-	# set "Hidden" attribute on backup dir 
-	Get-ChildItem $TargetConfigDirectory -Recurse | foreach {$_.Attributes = 'Hidden'}
-
+if ($Target -eq "dotnetnuke") {
+ 
 	## Backup database to the App_Data folder
+    # TODO: Backup db to $TargetConfigDirectory/db
 
 	Invoke-Sqlcmd -Query "BACKUP DATABASE $DbName TO DISK='$TargetDirectory\App_Data\$DbName.bak' WITH FORMAT;" -ServerInstance $DbServer -Verbose
 	if ( -not $? ) {
@@ -65,10 +78,9 @@ if ($Target -eq "dotnetnuke") {
 	if ( -not $? ) {
 		Write-Warning "Database cleanup failed"
 	}
+}
 
-} # end $Target -eq "dotnetnuke" 
-
-## Making an archive
+## Make an archive
 
 $today = Get-Date -UFormat '%y%m%d'
 
@@ -86,9 +98,10 @@ if ( -not $? ) {
 	}
 }
 
-## Calculate MD5 checksum
+# TODO: Support more than one backup  file per day
+# TODO: Use PowerShell script and SHA256?
 
-# TODO: Use PowerShell script and SHA256
+## Calculate MD5 checksum
 
 $checkSumArgs = '-wp', '-add', "$Target-$today.7z"
 $checkSumCmd = "W:\Admin\fciv\fciv.exe"
@@ -111,4 +124,3 @@ for ($i = 0; $i -lt ($backups.Count - $MaxBackups); $i++) {
 }
 
 Pop-Location
-
