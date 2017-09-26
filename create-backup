@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# params
+TARGET=$1
+TARGET_DIR=$2
+BACKUP_DIR=$3
+DB_NAME=$4
+
+BACKUP_TMPDIR="$BACKUP_DIR/tmp"
+TODAY=$(date +%y%m%d)
+
+# cleanup backup temp directory
+rm -fR "$BACKUP_TMPDIR"
+
+# create subdirs in the backup temp directory
+mkdir -p "$BACKUP_TMPDIR/db"
+mkdir -p "$BACKUP_TMPDIR/website"
+mkdir -p "$BACKUP_TMPDIR/acl"
+mkdir -p "$BACKUP_TMPDIR/webserver"
+
+# create DB dump
+pg_dump -U backup $DB_NAME > "$BACKUP_TMPDIR/db/$DB_NAME.sql"
+
+# copy website
+cp -fR "$TARGET_DIR" "$BACKUP_TMPDIR/website/"
+
+# dump ACLs
+ls -lR "$TARGET_DIR" > "$BACKUP_TMPDIR/acl/acl.txt"
+
+# copy webserver configuration
+cp -f "/etc/apache2/sites-available/000-default.conf" "$BACKUP_TMPDIR/webserver/"
+cp -f "/etc/apache2/mods-available/passenger.conf" "$BACKUP_TMPDIR/webserver/"
+
+# make an archive
+tar -czf "${TARGET}_${TODAY}.tar.gz" -C "$BACKUP_TMPDIR" ./
+mv -f "${TARGET}_${TODAY}.tar.gz" "$BACKUP_DIR"
+
+# cleanup backup temp directory
+rm -fR "$BACKUP_TMPDIR"
