@@ -36,7 +36,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # HACK: Need less hacky check for fciv-generated MD5
-if [ $BACKUP_EXT -eq "7z" ]; then
+if [ "$BACKUP_EXT" = "7z" ]; then
 	# check MD5
 	dos2unix "$TARGET_FILE.md5"
 	# grep removes fciv comments, sed add two spaces after hash
