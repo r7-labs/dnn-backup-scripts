@@ -1,0 +1,21 @@
+#!/bin/sh
+
+get_backups_count () {
+    local BACKUPS_COUNT=$(find . -type f -name "$1-*.$2" -print | wc -l)
+    echo "$BACKUPS_COUNT"
+}
+
+remove_old_backups () {
+    local TARGET=$1
+    local BACKUP_EXT=$2
+    local MAX_BACKUPS=$3
+    local BACKUPS_COUNT=$(get_backups_count $TARGET $BACKUP_EXT)
+    while [ $BACKUPS_COUNT -gt $MAX_BACKUPS ]; do
+        local OLDEST_BACKUP_FILE=$(find . -type f -name "$TARGET-*.$BACKUP_EXT" -print | sort | head -1)
+        rm -f "$OLDEST_BACKUP_FILE"
+        if [ -f "$OLDEST_BACKUP_FILE.md5" ]; then
+            rm -f "$OLDEST_BACKUP_FILE.md5"
+        fi
+        local BACKUPS_COUNT=$(get_backups_count $TARGET $BACKUP_EXT)
+    done
+}

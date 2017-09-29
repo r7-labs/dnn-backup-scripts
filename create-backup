@@ -1,14 +1,19 @@
 #!/bin/sh
 
+cd $(dirname $0)
+. ./backup-functions
+
 # params
 TARGET=$1
-TARGET_DIR=$2
-BACKUP_DIR=$3
-DB_NAME=$4
+DB_NAME=$2
+TARGET_DIR=$3
+BACKUP_DIR=$4
 MAX_BACKUPS=$5
 
 BACKUP_TMPDIR="$BACKUP_DIR/tmp"
 TODAY=$(date +%y%m%d)
+BACKUP_EXT="tar.gz"
+TARGET_FILE=$TARGET-$TODAY.$BACKUP_EXT
 
 # cleanup backup temp directory
 rm -fR "$BACKUP_TMPDIR"
@@ -33,20 +38,17 @@ cp -f "/etc/apache2/sites-available/000-default.conf" "$BACKUP_TMPDIR/webserver/
 cp -f "/etc/apache2/mods-available/passenger.conf" "$BACKUP_TMPDIR/webserver/"
 
 # make an archive
-tar -czf "$TARGET-$TODAY.tar.gz" -C "$BACKUP_TMPDIR" ./
-md5sum "$TARGET-$TODAY.tar.gz" > "$TARGET-$TODAY.md5"
-mv -f "$TARGET-$TODAY.tar.gz" "$BACKUP_DIR"
-mv -f "$TARGET-$TODAY.md5" "$BACKUP_DIR"
+tar -czf "$TARGET_FILE" -C "$BACKUP_TMPDIR" ./
+md5sum "$TARGET_FILE" > "$TARGET_FILE.md5"
+mv -f "$TARGET_FILE" "$BACKUP_DIR"
+mv -f "$TARGET_FILE.md5" "$BACKUP_DIR"
 
 # cleanup backup temp directory
 rm -fR "$BACKUP_TMPDIR"
 
-BACKUPS_COUNT=$(find . -type f -name "$TARGET-*.tar.gz" -print | wc -l)
-while [ $BACKUPS_COUNT -gt $MAX_BACKUPS ]; do
-	OLDEST_BACKUP_FILE=$(find . -type f -name "$TARGET-*.tar.gz" -print | sort | head -1)
-	rm -f "$OLDEST_BACKUP_FILE"
-	if [ -f "$OLDEST_BACKUP_FILE.md5" ]; then
-		rm -f "$OLDEST_BACKUP_FILE.md5"
-	fi
-	BACKUPS_COUNT=$(find . -name "$TARGET-*.tar.gz" -print | wc -l)
-done
+ORIGINAL_DIR=$PWD
+cd $BACKUP_DIR
+
+remove_old_backups $TARGET $BACKUP_EXT $MAX_BACKUPS
+
+cd $ORIGINAL_DIR

@@ -1,15 +1,19 @@
 #!/bin/sh
 
+cd $(dirname $0)
+. ./backup-functions
+
 # params
 TARGET=$1
 GET_BASEURL=$2
 BACKUP_DIR=$3
-MAX_BACKUPS=$4
+BACKUP_EXT=$4
+MAX_BACKUPS=$5
 
 LIMIT_RATE=10m
 GET_CMD="curl --limit-rate $LIMIT_RATE"
 TODAY=$(date +%y%m%d)
-TARGET_FILE=$TARGET-$TODAY.7z
+TARGET_FILE=$TARGET-$TODAY.$BACKUP_EXT
 NOTIFY_TIME=1200000 # in ms, 20 min
 
 notify-send -t $NOTIFY_TIME "Backup download started" "Target: $TARGET"
@@ -45,15 +49,6 @@ else
 	notify-send -t $NOTIFY_TIME "Backup checksum verified" "$CHECKSUM_RESULT"
 fi
 
-BACKUPS_COUNT=$(find . -type f -name "$TARGET-*.7z" -print | wc -l)
-while [ $BACKUPS_COUNT -gt $MAX_BACKUPS ]; do
-	OLDEST_BACKUP_FILE=$(find . -type f -name "$TARGET-*.7z" -print | sort | head -1)
-	rm -f "$OLDEST_BACKUP_FILE"
-	if [ -f "$OLDEST_BACKUP_FILE.md5" ]; then
-		rm -f "$OLDEST_BACKUP_FILE.md5"
-	fi
-	BACKUPS_COUNT=$(find . -name "$TARGET-*.7z" -print | wc -l)
-done
+remove_old_backups $TARGET $BACKUP_EXT $MAX_BACKUPS
 
 cd $ORIGINAL_DIR
-
