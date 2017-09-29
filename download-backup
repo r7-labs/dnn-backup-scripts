@@ -35,10 +35,15 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-# check MD5
-dos2unix "$TARGET_FILE.md5"
-# grep removes fciv comments, sed add two spaces after hash
-CHECKSUM_RESULT=$(cat "$TARGET_FILE.md5" | grep -v // |  sed -e "s/ \+/  /g" | md5sum -c)
+# HACK: Need less hacky check for fciv-generated MD5
+if [ $BACKUP_EXT -eq "7z" ]; then
+	# check MD5
+	dos2unix "$TARGET_FILE.md5"
+	# grep removes fciv comments, sed add two spaces after hash
+	CHECKSUM_RESULT=$(cat "$TARGET_FILE.md5" | grep -v // |  sed -e "s/ \+/  /g" | md5sum -c)
+else
+	CHECKSUM_RESULT=$(cat "$TARGET_FILE.md5" | md5sum -c)
+fi
 
 if [ $? -ne 0 ]; then
 	notify-send -u critical -t $NOTIFY_TIME "Backup checksum error" "$CHECKSUM_RESULT"
