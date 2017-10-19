@@ -16,10 +16,10 @@ TODAY=$(date +%y%m%d)
 TARGET_FILE=$TARGET-$TODAY.$BACKUP_EXT
 LOG="download-backup.log"
 
-log_message "Backup download started" "Target: $TARGET" $LOG
-
 ORIGINAL_DIR=$PWD
 cd $BACKUP_DIR
+
+log_message "Backup download started" "Target: $TARGET" $LOG
 
 $GET_CMD -o "$TARGET_FILE" "$GET_BASEURL/$TARGET_FILE"
 
