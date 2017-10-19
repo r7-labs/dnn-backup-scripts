@@ -19,3 +19,24 @@ remove_old_backups () {
         local BACKUPS_COUNT=$(get_backups_count $TARGET $BACKUP_EXT)
     done
 }
+
+# log_notify arguments:
+# $1 - message title
+# $2 - message body
+# $3 - name of logfile
+# $4 - urgency (low, normal, critical)
+log_notify () {
+    local NOTIFY_TIME=1200000 # in ms, 20 min
+    echo "$(date -R) - $1 : $2" >> $3
+    if [ -x "$(command -v notify-send)" ]; then
+        notify-send -u $4 -t $NOTIFY_TIME "$1" "$2"
+    fi
+}
+
+log_message () {
+    log_notify "$1" "$2" "$3" "normal"
+}
+
+log_error () {
+    log_notify "$1" "$2" "$3" "critical"
+}

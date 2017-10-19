@@ -14,9 +14,9 @@ LIMIT_RATE=10m
 GET_CMD="curl --limit-rate $LIMIT_RATE"
 TODAY=$(date +%y%m%d)
 TARGET_FILE=$TARGET-$TODAY.$BACKUP_EXT
-NOTIFY_TIME=1200000 # in ms, 20 min
+LOG="download-backup.log"
 
-notify-send -t $NOTIFY_TIME "Backup download started" "Target: $TARGET"
+log_message "Backup download started" "Target: $TARGET" $LOG
 
 ORIGINAL_DIR=$PWD
 cd $BACKUP_DIR
@@ -24,14 +24,14 @@ cd $BACKUP_DIR
 $GET_CMD -o "$TARGET_FILE" "$GET_BASEURL/$TARGET_FILE"
 
 if [ $? -ne 0 ]; then
-	notify-send -u critical -t $NOTIFY_TIME "Backup download error" "Cannot download $TARGET backup file!"
+	log_error "Backup download error" "Cannot download $TARGET backup file!" $LOG
 	exit 1
 fi
 
 $GET_CMD -o "$TARGET_FILE.md5" "$GET_BASEURL/$TARGET_FILE.md5"
 
 if [ $? -ne 0 ]; then
-	notify-send -u critical -t $NOTIFY_TIME "Backup download error" "Cannot download $TARGET backup file checksum!"
+	log_error "Backup download error" "Cannot download $TARGET backup file checksum!" $LOG
 	exit 1
 fi
 
@@ -46,12 +46,12 @@ else
 fi
 
 if [ $? -ne 0 ]; then
-	notify-send -u critical -t $NOTIFY_TIME "Backup checksum error" "$CHECKSUM_RESULT"
+	log_error "Backup checksum error" "$CHECKSUM_RESULT" $LOG
 	rm -f "$TARGET_FILE"
 	rm -f "$TARGET_FILE.md5"
 	exit 1
 else
-	notify-send -t $NOTIFY_TIME "Backup checksum verified" "$CHECKSUM_RESULT"
+	log_message "Backup checksum verified" "$CHECKSUM_RESULT" $LOG
 fi
 
 remove_old_backups $TARGET $BACKUP_EXT $MAX_BACKUPS
