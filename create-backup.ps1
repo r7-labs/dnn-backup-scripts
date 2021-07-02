@@ -7,10 +7,12 @@ Param (
 $BackupDirectory = "B:\Backup"
 # TODO: Backup attachments outside target directory
 $ConfigDirectory = "_Backup_9SH26GA7"
-$DbDirectory = "W:\Database"
-$DbLogDirectory = "W:\Database"
+$DbDirectory = "X:\data"
+$DbLogDirectory = "X:\data"
 $DbServer = "(local)"
-$DbName = "Dnn804"
+$DbName = "volgau.com"
+$AdminDirectory = "X:\admin"
+$checkSumCmd = "X:\admin\fciv\fciv.exe"
 
 if (-not (Test-Path -Path $TargetDirectory)) {
 	Write-Error "Target directory '$TargetDirectory' not exists"
@@ -51,7 +53,7 @@ Copy-Item -Recurse -Force $iisConfigDirectory (Join-Path $TargetConfigDirectory 
 
 ## Backup admin scripts
 
-Copy-Item -Recurse -Force "W:\admin" (Join-Path $TargetConfigDirectory "admin")
+Copy-Item -Recurse -Force $AdminDirectory (Join-Path $TargetConfigDirectory "admin")
 
 ## Backup target ACLs
 
@@ -62,7 +64,7 @@ if ($Target -eq "dotnetnuke") {
 	## Backup database to the App_Data folder
     # TODO: Backup db to $TargetConfigDirectory/db
 
-	Invoke-Sqlcmd -Query "BACKUP DATABASE $DbName TO DISK='$TargetDirectory\App_Data\$DbName.bak' WITH FORMAT;" -ServerInstance $DbServer -Verbose
+	Invoke-Sqlcmd -Query "BACKUP DATABASE `"$DbName`" TO DISK='$TargetDirectory\App_Data\$DbName.bak' WITH FORMAT;" -ServerInstance "$DbServer" -Verbose
 	if ( -not $? ) {
 		Write-Error "Database backup failed"
 	}
@@ -103,7 +105,6 @@ Remove-Item -Recurse -Force $TargetConfigDirectory
 ## Calculate MD5 checksum
 
 $checkSumArgs = '-wp', '-add', "$Target-$today.7z"
-$checkSumCmd = "W:\Admin\fciv\fciv.exe"
 & $checkSumCmd $checkSumArgs | Out-File "$Target-$today.7z.md5"
 	
 if ( -not $? ) {
