@@ -64,14 +64,14 @@ if ($Target -eq "dotnetnuke") {
 	## Backup database to the App_Data folder
     # TODO: Backup db to $TargetConfigDirectory/db
 
-	Invoke-Sqlcmd -Query "BACKUP DATABASE `"$DbName`" TO DISK='$TargetDirectory\App_Data\$DbName.bak' WITH FORMAT;" -ServerInstance "$DbServer" -Verbose
+	Invoke-Sqlcmd -Query "BACKUP DATABASE [$DbName] TO DISK='$TargetDirectory\App_Data\$DbName.bak' WITH FORMAT;" -ServerInstance "$DbServer" -Verbose
 	if ( -not $? ) {
 		Write-Error "Database backup failed"
 	}
 
 	## Cleanup database
 
-	Invoke-Sqlcmd -Query "EXECUTE dbo.r7_Dnn_Cleanup;" -ServerInstance $DbServer -Database $DbName -Verbose
+	Invoke-Sqlcmd -Query "EXECUTE dbo.r7_Dnn_Cleanup;" -ServerInstance "$DbServer" -Database "$DbName" -Verbose
 	if ( -not $? ) {
 		Write-Warning "Database cleanup failed"
 	}
